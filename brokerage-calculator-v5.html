@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NSE/MCX Brokerage Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+/* ===== CLEAN LIGHT THEME — HIGH READABILITY ===== */
+:root {
+  --bg: #F0F4F8;
+  --surface: #FFFFFF;
+  --surface2: #F7F9FC;
+  --border: #DDE3EC;
+  --border2: #C8D0DC;
+  --accent: #1A6FE8;
+  --accent-light: #EBF2FF;
+  --accent2: #E05C00;
+  --text: #1A202C;
+  --text2: #3D4A5C;
+  --muted: #7A8799;
+  --green: #0B7B3E;
+  --green-bg: #E8F5EE;
+  --red: #C0392B;
+  --red-bg: #FDECEA;
+  --gold: #B45309;
+  --gold-bg: #FEF3C7;
+  --purple: #6D28D9;
+  --purple-bg: #F5F0FF;
+  --header-bg: #1C2B4A;
+  --shadow-sm: 0 1px 4px rgba(0,0,0,.07), 0 2px 8px rgba(0,0,0,.05);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.08), 0 1px 4px rgba(0,0,0,.05);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ===== HEADER ===== */
+header {
+  background: var(--header-bg);
+  padding: 18px 40px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 12px rgba(0,0,0,.18);
+}
+
+.logo-mark {
+  width: 42px; height: 42px;
+  background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Inter', sans-serif;
+  font-weight: 800; font-size: 18px;
+  color: #fff; flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(29,78,216,.4);
+}
+
+header h1 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 800; font-size: 20px;
+  color: #FFFFFF;
+  letter-spacing: -.4px;
+}
+
+header p { color: #94A3B8; font-size: 12px; margin-top: 2px; font-weight: 400; }
+
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.badge {
+  background: rgba(59,130,246,.25);
+  border: 1px solid rgba(59,130,246,.4);
+  color: #93C5FD;
+  font-size: 10px; padding: 4px 10px;
+  border-radius: 20px; letter-spacing: 1px; text-transform: uppercase;
+  font-weight: 700;
+}
+
+.export-btns { display: flex; gap: 8px; }
+
+.exp-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 8px; border: 1px solid;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  font-weight: 700; font-size: 11px; letter-spacing: .3px;
+  transition: all .2s; text-transform: uppercase;
+}
+
+.exp-btn.excel {
+  border-color: rgba(34,197,94,.5);
+  color: #16A34A;
+  background: rgba(34,197,94,.12);
+}
+.exp-btn.excel:hover { background: rgba(34,197,94,.22); transform: translateY(-1px); box-shadow: 0 3px 10px rgba(34,197,94,.2); }
+
+.exp-btn.pdf {
+  border-color: rgba(239,68,68,.5);
+  color: #DC2626;
+  background: rgba(239,68,68,.08);
+}
+.exp-btn.pdf:hover { background: rgba(239,68,68,.18); transform: translateY(-1px); box-shadow: 0 3px 10px rgba(239,68,68,.2); }
+
+/* ===== MAIN ===== */
+.main { max-width: 1280px; margin: 0 auto; padding: 28px 40px 50px; }
+
+/* ===== SEGMENT TABS ===== */
+.segment-tabs {
+  display: flex; gap: 4px; margin-bottom: 24px;
+  background: #FFFFFF; padding: 5px;
+  border-radius: 12px; width: fit-content;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.seg-btn {
+  padding: 9px 18px; border: none; border-radius: 8px;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  font-weight: 600; font-size: 13px;
+  transition: all .2s; color: var(--muted); background: transparent;
+}
+.seg-btn:hover:not(.active) { background: var(--surface2); color: var(--text2); }
+.seg-btn.active { background: var(--accent); color: #fff; box-shadow: 0 3px 10px rgba(26,111,232,.3); }
+.seg-btn.active.is-mtf { background: var(--purple); box-shadow: 0 3px 10px rgba(109,40,217,.3); }
+.seg-btn.active.is-pledge { background: #0F766E; color: #fff; box-shadow: 0 3px 10px rgba(15,118,110,.3); }
+.input-panel.pledge-panel::before { background: linear-gradient(90deg, #0F766E, #14B8A6); }
+.tag-pledge { background: #F0FDF9; color: #0F766E; border: 1px solid #99F6E4; font-size: 11px; font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 4px 12px; border-radius: 20px; }
+.tag-amc { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-size: 11px; font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 4px 12px; border-radius: 20px; }
+.amc-panel::before { background: linear-gradient(90deg, #1D4ED8, #60A5FA); }
+
+.pledge-info strong { color: #0D3D38; }
+.calc-btn.pledge-btn { background: #0F766E; color: #fff; box-shadow: 0 4px 14px rgba(15,118,110,.3); }
+.pledge-panel .field input:focus, .pledge-panel .field select:focus { border-color: #0F766E; box-shadow: 0 0 0 3px rgba(15,118,110,.1); }
+.collateral-banner { background: linear-gradient(135deg, #F0FDF9, #CCFBF1); border: 1.5px solid #5EEAD4; border-radius: 12px; padding: 14px 20px; margin-bottom: 22px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.coll-item .coll-label { font-size: 11px; color: #0F766E; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 3px; }
+.coll-item .coll-val { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 19px; color: #0D3D38; }
+
+/* ===== INPUT PANEL ===== */
+.input-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 26px;
+  margin-bottom: 22px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.input-panel::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--accent), #60A5FA);
+  border-radius: 14px 14px 0 0;
+}
+.input-panel.mtf-panel::before { background: linear-gradient(90deg, var(--purple), #A78BFA); }
+.input-panel.slbm-panel::before { background: linear-gradient(90deg, #D97706, #F59E0B); }
+
+.panel-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 16px;
+}
+
+.g4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+.g3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+.g2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; }
+
+.field label {
+  display: block;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: .5px; text-transform: uppercase;
+  color: var(--text2); margin-bottom: 6px;
+}
+
+.field input, .field select {
+  width: 100%;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 13px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px; font-weight: 500;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+  -webkit-appearance: none;
+}
+.field input:hover, .field select:hover { border-color: var(--border2); }
+.field input:focus, .field select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(26,111,232,.12);
+  background: #fff;
+}
+.mtf-panel .field input:focus, .mtf-panel .field select:focus {
+  border-color: var(--purple); box-shadow: 0 0 0 3px rgba(109,40,217,.1);
+}
+.slbm-panel .field input:focus, .slbm-panel .field select:focus {
+  border-color: #D97706; box-shadow: 0 0 0 3px rgba(217,119,6,.1);
+}
+.field select option { background: #fff; }
+
+.info-box {
+  background: #F0F6FF;
+  border: 1px solid #C3D9FF;
+  border-radius: 10px;
+  padding: 13px 16px;
+  margin-bottom: 18px;
+  font-size: 13px;
+  color: #3B5680;
+  line-height: 1.75;
+}
+.info-box strong { color: #1A3A60; font-weight: 700; }
+.mtf-panel .info-box { background: #F6F0FF; border-color: #D4BBFF; color: #4B2D7A; }
+.mtf-panel .info-box strong { color: #2D1860; }
+.slbm-panel .info-box { background: #FFFBEB; border-color: #FDE68A; color: #6B4A00; }
+.slbm-panel .info-box strong { color: #3D2A00; }
+
+.calc-btn {
+  border: none; padding: 12px 28px; border-radius: 10px;
+  font-family: 'Inter', sans-serif; font-weight: 700; font-size: 14px;
+  cursor: pointer; transition: all .2s; margin-top: 8px;
+  letter-spacing: .2px;
+}
+.calc-btn.default {
+  background: var(--accent); color: #fff;
+  box-shadow: 0 4px 14px rgba(26,111,232,.35);
+}
+.calc-btn.mtf-btn {
+  background: var(--purple); color: #fff;
+  box-shadow: 0 4px 14px rgba(109,40,217,.3);
+}
+.calc-btn.slbm-btn {
+  background: #D97706; color: #fff;
+  box-shadow: 0 4px 14px rgba(217,119,6,.3);
+}
+.calc-btn:hover { transform: translateY(-2px); filter: brightness(1.07); }
+
+/* ===== SUMMARY BAR ===== */
+.summary-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 26px;
+  margin-bottom: 24px;
+  display: flex; gap: 24px; align-items: center; flex-wrap: wrap;
+  box-shadow: var(--shadow-sm);
+}
+.sum-item .sum-label {
+  font-size: 11px; color: var(--muted);
+  letter-spacing: .8px; text-transform: uppercase;
+  font-weight: 600; margin-bottom: 4px;
+}
+.sum-item .sum-val {
+  font-family: 'Inter', sans-serif;
+  font-weight: 800; font-size: 20px; color: var(--text);
+}
+.sdiv { width: 1px; height: 36px; background: var(--border); }
+
+/* ===== RESULTS HEADER ===== */
+.results-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.results-header h2 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 800; font-size: 17px; color: var(--text);
+}
+
+/* ===== BROKER CARDS ===== */
+.broker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+
+.broker-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 14px; padding: 18px;
+  position: relative; overflow: hidden;
+  transition: transform .2s, border-color .2s, box-shadow .2s;
+  box-shadow: var(--shadow-sm);
+}
+.broker-card:hover {
+  transform: translateY(-3px);
+  border-color: #93C5FD;
+  box-shadow: 0 8px 24px rgba(26,111,232,.12);
+}
+.broker-card.cheapest {
+  border-color: #16A34A;
+  box-shadow: 0 0 0 1px #16A34A, 0 8px 24px rgba(22,163,74,.1);
+}
+.broker-card.cheapest::after {
+  content: '🏆 LOWEST';
+  position: absolute; top: 10px; right: 10px;
+  background: #16A34A; color: #fff;
+  font-size: 9px; font-weight: 700; letter-spacing: 1px;
+  padding: 3px 9px; border-radius: 20px;
+  font-family: 'Inter', sans-serif;
+}
+
+.broker-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.broker-logo {
+  width: 36px; height: 36px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Inter', sans-serif; font-weight: 800; font-size: 12px;
+  flex-shrink: 0; color: #fff;
+}
+.broker-name { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 14px; color: var(--text); }
+.broker-type { font-size: 11px; color: var(--muted); font-weight: 500; margin-top: 1px; }
+
+.charge-rows { border-top: 1.5px solid var(--border); padding-top: 12px; }
+
+.charge-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 12.5px; }
+.charge-row .lbl { color: var(--text2); font-weight: 500; }
+.charge-row .val { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--text); font-size: 12px; }
+
+.charge-row.section-head .lbl {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; padding-top: 8px; color: var(--muted);
+}
+.charge-row.section-head.mtf-head .lbl { color: var(--purple); }
+.charge-row.section-head.slbm-head .lbl { color: #D97706; }
+
+.charge-row.total {
+  border-top: 1.5px dashed var(--border2);
+  margin-top: 6px; padding-top: 8px;
+  font-size: 13px;
+}
+.charge-row.total .lbl { font-weight: 700; color: var(--text); font-size: 13px; }
+.charge-row.total .val {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700; font-size: 15px; color: var(--accent2);
+}
+
+.net-pl {
+  margin-top: 10px; padding: 10px 13px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.net-pl .lbl { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
+.net-pl .val { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px; }
+.net-pl .val.profit { color: var(--green); }
+.net-pl .val.loss { color: var(--red); }
+
+.empty-state { text-align: center; padding: 52px 20px; color: var(--muted); }
+.empty-state .icon { font-size: 44px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; color: var(--muted); font-weight: 500; }
+
+/* ===== BROKER LOGO COLORS ===== */
+.z  { background: linear-gradient(135deg, #2563EB, #1E40AF); }
+.u  { background: linear-gradient(135deg, #7C3AED, #5B21B6); }
+.ao { background: linear-gradient(135deg, #EA580C, #9A3412); }
+.f  { background: linear-gradient(135deg, #0891B2, #164E63); }
+.d  { background: linear-gradient(135deg, #16A34A, #14532D); }
+.ab { background: linear-gradient(135deg, #DB2777, #831843); }
+.p  { background: linear-gradient(135deg, #DC2626, #7F1D1D); }
+.g  { background: linear-gradient(135deg, #15803D, #14532D); }
+.ic { background: linear-gradient(135deg, #F97316, #C2410C); }
+.hd { background: linear-gradient(135deg, #1D4ED8, #1E3A8A); }
+.ko { background: linear-gradient(135deg, #D97706, #92400E); }
+.sb { background: linear-gradient(135deg, #2563EB, #1E3A8A); }
+.sh { background: linear-gradient(135deg, #7C3AED, #4C1D95); }
+.ze { background: linear-gradient(135deg, #0F766E, #134E4A); }
+.sn { background: linear-gradient(135deg, #059669, #064E3B); }
+.ii { background: linear-gradient(135deg, #D97706, #92400E); }
+.im { background: linear-gradient(135deg, #0F766E, #134E4A); }
+.ms { background: linear-gradient(135deg, #1E3A8A, #1E40AF); }
+.pm { background: linear-gradient(135deg, #2563EB, #1D4ED8); }
+.cb { background: linear-gradient(135deg, #7C3AED, #5B21B6); }
+.sm { background: linear-gradient(135deg, #6D28D9, #4C1D95); }
+
+/* ===== FOOTER ===== */
+footer {
+  text-align: center;
+  padding: 28px 20px 36px;
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  background: #fff;
+}
+.footer-credit {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 50px;
+  padding: 11px 26px;
+  font-size: 13px; color: var(--muted); font-weight: 500;
+  box-shadow: var(--shadow-sm);
+}
+.footer-credit .name {
+  font-family: 'Inter', sans-serif;
+  font-weight: 800; font-size: 15px;
+  color: var(--accent);
+}
+.footer-credit .dot { color: var(--border2); }
+
+/* ===== SECTION DIVIDER BAR ===== */
+.sdiv-bar { display: flex; align-items: center; gap: 10px; margin: 4px 0 16px; }
+.sdiv-bar span {
+  font-size: 11px; font-family: 'Inter', sans-serif;
+  font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  padding: 4px 12px; border-radius: 20px;
+}
+.tag-mtf { background: var(--purple-bg); color: var(--purple); border: 1px solid #C4B5FD; }
+.tag-slbm { background: var(--gold-bg); color: var(--gold); border: 1px solid #FCD34D; }
+.sdiv-bar::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ===== SEGMENT BADGE ===== */
+#segBadge {
+  background: var(--accent-light) !important;
+  border-color: #BFDBFE !important;
+  color: var(--accent) !important;
+  font-weight: 700 !important;
+}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:900px) {
+  header { padding: 14px 18px; }
+  header h1 { font-size: 17px; }
+  .main { padding: 16px 18px 32px; }
+  .g4, .g3 { grid-template-columns: 1fr 1fr; }
+  .broker-grid { grid-template-columns: 1fr; }
+  .summary-bar { gap: 16px; }
+  .segment-tabs { width: 100%; }
+  .header-right { width: 100%; }
+}
+@media(max-width:500px) {
+  .g4, .g3, .g2 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">₹</div>
+  <div>
+    <h1>NSE / MCX Brokerage Calculator</h1>
+    <p>Intraday · Delivery · F&amp;O · Currency · Commodity · MTF · SLBM · Pledge · AMC — 21 Brokers</p>
+  </div>
+  <div class="header-right">
+    <span class="badge">NSE / BSE / MCX</span>
+    <span class="badge" style="background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.4);color:#FCA5A5;">STT Budget 2026</span>
+    <div class="export-btns">
+      <button class="exp-btn excel" onclick="exportExcel()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+        Export Excel
+      </button>
+      <button class="exp-btn pdf" onclick="exportPDF()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+        Export PDF
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="main">
+
+  <div class="segment-tabs">
+    <button class="seg-btn active" onclick="setSegment('intraday')">⚡ Intraday</button>
+    <button class="seg-btn" onclick="setSegment('delivery')">📦 Delivery</button>
+    <button class="seg-btn" onclick="setSegment('futures')">📈 Eq Futures</button>
+    <button class="seg-btn" onclick="setSegment('options')">⚙️ Eq Options</button>
+    <button class="seg-btn" onclick="setSegment('currency')">💱 Currency</button>
+    <button class="seg-btn" onclick="setSegment('commodity')">🥇 Commodity</button>
+    <button class="seg-btn" onclick="setSegment('mtf')">💳 MTF</button>
+    <button class="seg-btn" onclick="setSegment('slbm')">🔄 SLBM</button>
+    <button class="seg-btn" onclick="setSegment('pledge')">🔒 Pledge</button>
+    <button class="seg-btn" onclick="setSegment('amc')">🏦 AMC</button>
+  </div>
+
+  <!-- Standard Segment Panel -->
+  <div id="stdPanel" class="input-panel">
+    <div class="panel-title">Trade Details — <span id="segLabelTitle">Intraday</span></div>
+    <div class="g4" style="margin-bottom:12px;">
+      <div class="field">
+        <label>Buy Price (₹)</label>
+        <input type="number" id="buyPrice" value="1500" min="0" step="0.01" oninput="calculate()">
+      </div>
+      <div class="field">
+        <label>Sell Price (₹)</label>
+        <input type="number" id="sellPrice" value="1520" min="0" step="0.01" oninput="calculate()">
+      </div>
+      <div class="field">
+        <label id="qtyLabel">Quantity (Shares)</label>
+        <input type="number" id="qty" value="100" min="1" oninput="calculate()">
+      </div>
+      <div class="field" id="lotField" style="display:none;">
+        <label>Lot Size</label>
+        <input type="number" id="lotSize" value="50" min="1" oninput="calculate()">
+      </div>
+      <div class="field" id="premField" style="display:none;">
+        <label>Option Premium (₹)</label>
+        <input type="number" id="premium" value="25" min="0" step="0.01" oninput="calculate()">
+      </div>
+    </div>
+    <button class="calc-btn default" onclick="calculate()">⚡ Calculate &amp; Compare</button>
+  </div>
+
+  <!-- Currency Panel -->
+  <div id="currencyPanel" class="input-panel" style="display:none;">
+    <div class="sdiv-bar"><span class="tag-mtf" style="background:#E0F2FE;color:#0369A1;border-color:#7DD3FC;">💱 Currency Derivatives (NSE)</span></div>
+    <div class="info-box" style="background:#F0F9FF;border-color:#BAE6FD;color:#0C4A6E;">
+      <strong>Currency F&O</strong> trades on NSE-CDS segment. No STT or CTT. Exchange charges: Futures ₹0.35/lakh turnover | Options ₹2/lakh premium. No DP charges. SEBI ₹10/crore.<br>
+      Select <strong>Futures</strong> or <strong>Options</strong>; enter lot size (e.g. USD/INR = 1000 units per lot).
+    </div>
+    <div class="g4" style="margin-bottom:12px;">
+      <div class="field">
+        <label>Type</label>
+        <select id="currType" onchange="calcCurrency()">
+          <option value="futures">Currency Futures</option>
+          <option value="options">Currency Options</option>
+        </select>
+      </div>
+      <div class="field"><label>Buy Price (₹)</label><input type="number" id="currBuy" value="84.50" min="0" step="0.0001" oninput="calcCurrency()"></div>
+      <div class="field"><label>Sell Price (₹)</label><input type="number" id="currSell" value="84.75" min="0" step="0.0001" oninput="calcCurrency()"></div>
+      <div class="field"><label>No. of Lots</label><input type="number" id="currLots" value="5" min="1" oninput="calcCurrency()"></div>
+      <div class="field"><label>Lot Size (Units)</label><input type="number" id="currLotSize" value="1000" min="1" oninput="calcCurrency()"></div>
+      <div class="field" id="currPremField" style="display:none;"><label>Option Premium (₹)</label><input type="number" id="currPrem" value="0.25" min="0" step="0.0001" oninput="calcCurrency()"></div>
+    </div>
+    <button class="calc-btn default" style="background:#0369A1;box-shadow:0 4px 14px rgba(3,105,161,.3)" onclick="calcCurrency()">💱 Calculate Currency Charges</button>
+  </div>
+
+  <!-- Commodity Panel -->
+  <div id="commodityPanel" class="input-panel" style="display:none;">
+    <div class="sdiv-bar"><span class="tag-slbm" style="background:#FFF7ED;color:#C2410C;border-color:#FED7AA;">🥇 Commodity Derivatives (MCX)</span></div>
+    <div class="info-box" style="background:#FFF7ED;border-color:#FED7AA;color:#7C2D12;">
+      <strong>MCX Commodity</strong> — Non-agricultural futures attract <strong>CTT 0.01%</strong> on sell side (gold, silver, crude oil, metals). Agri commodities are CTT-exempt. Exchange charge: ~₹2.10/lakh turnover. No STT, no DP charges. SEBI ₹10/crore.<br>
+      Select contract type and enter values based on MCX lot sizes (e.g. Gold Mini = 100g, Crude Oil = 100 bbl).
+    </div>
+    <div class="g4" style="margin-bottom:12px;">
+      <div class="field">
+        <label>Contract Type</label>
+        <select id="commType" onchange="calcCommodity()">
+          <option value="futures">Commodity Futures (Non-Agri)</option>
+          <option value="agri">Agri Futures (CTT Exempt)</option>
+          <option value="options">Commodity Options</option>
+        </select>
+      </div>
+      <div class="field"><label>Buy Price (₹)</label><input type="number" id="commBuy" value="72000" min="0" step="1" oninput="calcCommodity()"></div>
+      <div class="field"><label>Sell Price (₹)</label><input type="number" id="commSell" value="72500" min="0" step="1" oninput="calcCommodity()"></div>
+      <div class="field"><label>No. of Lots</label><input type="number" id="commLots" value="2" min="1" oninput="calcCommodity()"></div>
+      <div class="field"><label>Lot Size (Units/gm/bbl)</label><input type="number" id="commLotSize" value="100" min="1" oninput="calcCommodity()"></div>
+      <div class="field" id="commPremField" style="display:none;"><label>Option Premium (₹)</label><input type="number" id="commPrem" value="500" min="0" step="1" oninput="calcCommodity()"></div>
+    </div>
+    <button class="calc-btn slbm-btn" onclick="calcCommodity()">🥇 Calculate Commodity Charges</button>
+  </div>
+
+  <!-- MTF Panel -->
+  <div id="mtfPanel" class="input-panel mtf-panel" style="display:none;">
+    <div class="sdiv-bar"><span class="tag-mtf">Margin Trading Facility (MTF)</span></div>
+    <div class="info-box">
+      <strong>MTF</strong> lets you buy stocks by paying only a margin, with the broker funding the rest. You pay interest on the funded amount daily until you square off.<br>
+      <strong>Total Cost =</strong> Delivery brokerage + STT + Exchange charges + <em>MTF Interest (annual rate ÷ 365 × days × funded amount)</em> + GST on interest.
+    </div>
+    <div class="g4" style="margin-bottom:12px;">
+      <div class="field"><label>Buy Price (₹)</label><input type="number" id="mtfBuy" value="1500" min="0" step="0.01" oninput="calcMTF()"></div>
+      <div class="field"><label>Sell Price (₹)</label><input type="number" id="mtfSell" value="1550" min="0" step="0.01" oninput="calcMTF()"></div>
+      <div class="field"><label>Quantity (Shares)</label><input type="number" id="mtfQty" value="100" min="1" oninput="calcMTF()"></div>
+      <div class="field"><label>Margin Paid by You (₹)</label><input type="number" id="mtfMargin" value="50000" min="0" oninput="calcMTF()"></div>
+      <div class="field"><label>Holding Period (Days)</label><input type="number" id="mtfDays" value="5" min="1" max="365" oninput="calcMTF()"></div>
+    </div>
+    <button class="calc-btn mtf-btn" onclick="calcMTF()">💳 Calculate MTF Charges</button>
+  </div>
+
+  <!-- SLBM Panel -->
+  <div id="slbmPanel" class="input-panel slbm-panel" style="display:none;">
+    <div class="sdiv-bar"><span class="tag-slbm">Securities Lending &amp; Borrowing Mechanism (SLBM)</span></div>
+    <div class="info-box">
+      <strong>SLBM</strong> lets shareholders lend their securities to earn a lending fee, or borrow securities for short selling.<br>
+      <strong>Lender:</strong> Earns gross income minus platform charges. &nbsp;<strong>Borrower:</strong> Pays lending fee plus platform charges.<br>
+      <strong>Charges:</strong> SLBM Txn Fee (0.10% of transaction value) + GST (18%) + SEBI charges (₹0.10/lakh).
+    </div>
+    <div class="g4" style="margin-bottom:12px;">
+      <div class="field"><label>Stock Price (₹)</label><input type="number" id="slbmPrice" value="2000" min="0" step="0.01" oninput="calcSLBM()"></div>
+      <div class="field"><label>Quantity (Shares)</label><input type="number" id="slbmQty" value="100" min="1" oninput="calcSLBM()"></div>
+      <div class="field"><label>Lending Rate (% p.a.)</label><input type="number" id="slbmRate" value="12" min="0.01" step="0.01" oninput="calcSLBM()"></div>
+      <div class="field"><label>Lending Period (Days)</label><input type="number" id="slbmDays" value="30" min="1" max="365" oninput="calcSLBM()"></div>
+      <div class="field">
+        <label>Role</label>
+        <select id="slbmRole" onchange="calcSLBM()">
+          <option value="lender">Lender (Earn Income)</option>
+          <option value="borrower">Borrower (Pay Fee)</option>
+        </select>
+      </div>
+    </div>
+    <button class="calc-btn slbm-btn" onclick="calcSLBM()">🔄 Calculate SLBM Charges</button>
+  </div>
+
+  <!-- Pledge Panel -->
+  <div id="pledgePanel" class="input-panel pledge-panel" style="display:none;">
+    <div class="sdiv-bar"><span class="tag-pledge">🔒 Pledge / Unpledge</span></div>
+    <div class="info-box pledge-info">
+      <strong>Pledge</strong> lets you use your existing stock holdings as collateral to get extra margin for trading — without selling your shares.<br>
+      Charges apply <strong>per ISIN per request</strong> (regardless of quantity). GST (18%) is added on top of each broker's fee.<br>
+      <strong>Collateral Margin</strong> = Stock Value × (1 − Haircut%). SEBI mandates 50% cash + 50% collateral for F&O margins.
+    </div>
+    <div class="g4" style="margin-bottom:14px;">
+      <div class="field">
+        <label>Stock Value (₹)</label>
+        <input type="number" id="pledgeStockVal" value="200000" min="0" step="100" oninput="calcPledge()">
+      </div>
+      <div class="field">
+        <label>No. of ISINs (Stocks)</label>
+        <input type="number" id="pledgeISINs" value="3" min="1" max="50" oninput="calcPledge()">
+      </div>
+      <div class="field">
+        <label>Haircut % (avg)</label>
+        <input type="number" id="pledgeHaircut" value="20" min="0" max="80" step="1" oninput="calcPledge()">
+      </div>
+      <div class="field">
+        <label>Action</label>
+        <select id="pledgeAction" onchange="calcPledge()">
+          <option value="both">Pledge + Unpledge (Round trip)</option>
+          <option value="pledge">Pledge Only</option>
+          <option value="unpledge">Unpledge Only</option>
+        </select>
+      </div>
+    </div>
+    <button class="calc-btn pledge-btn" onclick="calcPledge()">🔒 Calculate Pledge Charges</button>
+  </div>
+
+  <!-- AMC Panel -->
+  <div id="amcPanel" class="input-panel" style="display:none;">
+    <div class="sdiv-bar"><span class="tag-amc">🏦 Demat Account AMC Comparison</span></div>
+    <div class="info-box" style="background:#F0F9FF;border-color:#BAE6FD;color:#0C4A6E;">
+      <strong>Annual Maintenance Charge (AMC)</strong> is a yearly fee charged by brokers to maintain your Demat account — whether you trade or not.<br>
+      Values shown are <strong>standard plan AMC (excl. GST)</strong>, billed annually. All GST at 18% extra. BSDA (Basic Services Demat Account) — ₹0 if holdings ≤ ₹4L, capped ₹100/yr if ₹4L–₹10L — available at all brokers per SEBI mandate.<br>
+      <strong>Note:</strong> Zerodha accounts opened on/after 1 Jun 2026 get free 1st year AMC. Most discount brokers waive AMC for year 1.
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px;">
+      <label style="font-size:12px;font-weight:600;color:var(--text2);">Sort by:</label>
+      <select id="amcSort" onchange="calcAMC()" style="padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);font-family:'Inter',sans-serif;font-weight:600;font-size:13px;color:var(--text);background:var(--surface2);cursor:pointer;">
+        <option value="amc">AMC (Low → High)</option>
+        <option value="name">Broker Name (A → Z)</option>
+        <option value="type">Broker Type</option>
+      </select>
+      <button class="calc-btn default" onclick="calcAMC()" style="margin-top:0;padding:10px 22px;font-size:13px;">🏦 Show AMC Comparison</button>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-bar" id="summaryBar" style="display:none;">
+    <div class="sum-item"><div class="sum-label">Trade Value</div><div class="sum-val" id="sumTV">—</div></div>
+    <div class="sdiv"></div>
+    <div class="sum-item"><div class="sum-label" id="sumPLLabel">Gross P&amp;L</div><div class="sum-val" id="sumPL">—</div></div>
+    <div class="sdiv"></div>
+    <div class="sum-item"><div class="sum-label">Lowest Charges</div><div class="sum-val" id="sumLow" style="color:var(--green)">—</div></div>
+    <div class="sdiv"></div>
+    <div class="sum-item"><div class="sum-label">Highest Charges</div><div class="sum-val" id="sumHigh" style="color:var(--accent2)">—</div></div>
+    <div class="sdiv"></div>
+    <div class="sum-item"><div class="sum-label">You Save</div><div class="sum-val" id="sumSave" style="color:var(--gold)">—</div></div>
+  </div>
+
+  <div class="results-header">
+    <h2>Broker Comparison</h2>
+    <span id="segBadge" style="font-size:11px;font-family:'Inter',sans-serif;letter-spacing:.5px;text-transform:uppercase;padding:3px 10px;border-radius:20px;border:1px solid;"></span>
+  </div>
+
+  <div class="broker-grid" id="brokerGrid">
+    <div class="empty-state" style="grid-column:1/-1">
+      <div class="icon">📊</div>
+      <p>Enter trade details and click Calculate to compare charges across brokers</p>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="footer-credit">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--muted)"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+    <span>Developed &amp; Designed by</span>
+    <span class="name">Shamsudeen EP</span>
+    <span class="dot">·</span>
+    <span>NSE / MCX Brokerage Calculator</span>
+    <span class="dot">·</span>
+    <span id="yr"></span>
+  </div>
+</footer>
+
+<script>
+document.getElementById('yr').textContent = new Date().getFullYear();
+
+let currentSeg = 'intraday';
+let lastResults = [];
+
+const BROKERS = [
+  // ── VERIFIED FROM OFFICIAL BROKER WEBSITES (Jun 2026) ──────────────────────────
+  // STT Futures: 0.05% sell (Budget 2026, eff. 1 Apr 2026) | Options: 0.15% sell premium
+  // NSE ETC: Equity 0.00297% | Futures 0.00173% | Options (premium) 0.03503%
+  // SEBI: Rs10/crore = 0.000001 on all turnover
+  // DP = Demat debit on delivery SELL per scrip (incl GST)
+  // Currency: No STT/CTT, ETC Fut 0.000035%/Opt 0.002% per premium, No DP
+  // Commodity (MCX): CTT 0.01% sell non-agri, MCX ETC ~0.0021%, No DP
+  //
+  // DISCOUNT BROKERS
+  { id:'zerodha',   name:'Zerodha',      short:'Z',   lc:'z',  type:'Discount',
+    // Official Jun 2026: Delivery free; Intraday/Futures ₹20 or 0.03% lower; Options ₹20 flat
+    // DP: ₹13.5+GST (₹3.5 CDSL + ₹9.5 Zerodha + ₹2.34 GST = ₹15.34 total, pre-GST base ₹13.5)
+    // MTF: 0.04%/day = 14.6% p.a.; Pledge ₹30+GST, Unpledge ₹30+GST (MTF auto-pledge ₹15+GST)
+    // AMC: ₹300/yr (free 1st yr for accounts opened on/after 1 Jun 2026)
+    intraday:{flat:20,pct:.0003}, delivery:{flat:0,pct:0}, futures:{flat:20,pct:.0003}, options:{flat:20,pct:0},
+    currency:{flat:20,pct:.0003}, commodity:{flat:20,pct:.0003},
+    dpCharge:13.5, etcExtra:0, deliveryNote:'Free', mtfRate:.146, slbmFee:.001,
+    pledgeCharge:30, unpledgeCharge:30, amc:300, amcNote:'Free 1st yr (from Jun 2026)' },
+
+  { id:'upstox',    name:'Upstox',       short:'U',   lc:'u',  type:'Discount',
+    // Official: Delivery ₹20 or 0.1% lower; Intraday ₹20 or 0.1%; Futures 0.05% or ₹20; Options ₹20 flat
+    // DP: ₹20 (₹3.5 CDSL + ₹16.5 Upstox) + GST; MTF ~16% p.a. (Upstox charges higher)
+    // AMC: ₹300/yr (free 1st yr)
+    intraday:{flat:20,pct:.001},  delivery:{flat:20,pct:.001}, futures:{flat:20,pct:.0005}, options:{flat:20,pct:0},
+    currency:{flat:20,pct:.001},  commodity:{flat:20,pct:.001},
+    dpCharge:20, etcExtra:0.0000048, deliveryNote:'₹20 or 0.1%', mtfRate:.18, slbmFee:.001,
+    pledgeCharge:15, unpledgeCharge:15, amc:300, amcNote:'Free 1st yr' },
+
+  { id:'angelone',  name:'Angel One',    short:'A',   lc:'ao', type:'Full Service',
+    // Official Nov 2024+: Delivery ₹20 or 0.1% lower (min ₹5); Intraday same; F&O ₹20 flat
+    // DP: ₹20 (₹3.5 CDSL + ₹16.5 Angel) + GST; MTF 14.97% p.a. (0.041%/day); Pledge ₹20+GST
+    // AMC: ₹240/yr
+    intraday:{flat:20,pct:.001},  delivery:{flat:20,pct:.001}, futures:{flat:20,pct:0}, options:{flat:20,pct:0},
+    currency:{flat:20,pct:.001},  commodity:{flat:20,pct:.001},
+    dpCharge:20, etcExtra:0, deliveryNote:'₹20 or 0.1%', mtfRate:.1499, slbmFee:.001,
+    pledgeCharge:20, unpledgeCharge:20, amc:240, amcNote:'₹240/yr' },
+
+  { id:'fyers',     name:'Fyers',        short:'F',   lc:'f',  type:'Discount',
+    // Official: Delivery ₹20 or 0.3% lower; Intraday/Futures ₹20 or 0.03%; Options ₹20 flat
+    // DP: ₹12.50+GST (lowest among major discount brokers); MTF from 12.49% p.a. (tiered)
+    // Pledge ₹10+GST, Unpledge free (verified from fyers.in/charges-list Mar 2026)
+    // AMC: ₹300/yr (billed quarterly ₹75)
+    intraday:{flat:20,pct:.0003}, delivery:{flat:20,pct:.003}, futures:{flat:20,pct:.0003}, options:{flat:20,pct:0},
+    currency:{flat:20,pct:.0003}, commodity:{flat:20,pct:.0003},
+    dpCharge:12.5, etcExtra:0, deliveryNote:'₹20 or 0.3%', mtfRate:.1249, slbmFee:.001,
+    pledgeCharge:10, unpledgeCharge:0, amc:300, amcNote:'₹75/qtr = ₹300/yr' },
+
+  { id:'dhan',      name:'Dhan',         short:'D',   lc:'d',  type:'Discount',
+    // Official: Delivery free; Intraday/Futures ₹20 or 0.03% lower; Options ₹20 flat
+    // DP: ₹12.50+GST; MTF ~12.49% p.a. (verified Jun 2026); Pledge ₹15+GST, Unpledge ₹15+GST
+    // AMC: ₹0 — Lifetime free
+    intraday:{flat:20,pct:.0003}, delivery:{flat:0,pct:0}, futures:{flat:20,pct:.0003}, options:{flat:20,pct:0},
+    currency:{flat:20,pct:.0003}, commodity:{flat:20,pct:.0003},
+    dpCharge:13.5, etcExtra:0, deliveryNote:'Free', mtfRate:.1249, slbmFee:.001,
+    pledgeCharge:15, unpledgeCharge:15, amc:0, amcNote:'Lifetime FREE' },
+
+  { id:'aliceblue', name:'Alice Blue',   short:'AB',  lc:'ab', type:'Discount',
+    // AMC: ₹400/yr
+    intraday:{flat:20,pct:.0005}, delivery:{flat:20,pct:.025}, futures:{flat:20,pct:.0005}, options:{flat:20,pct:0},
+    currency:{flat:20,pct:.0005}, commodity:{flat:20,pct:.0005},
+    dpCharge:15, etcExtra:0, deliveryNote:'₹20 or 2.5%', mtfRate:.18, slbmFee:.001,
+    pledgeCharge:15, unpledgeCharge:15, amc:400, amcNote:'₹400/yr' },
+
+  { id:'5paisa',    name:'5Paisa',       short:'P',   lc:'p',  type:'Discount',
+    // Official: ₹20 flat all segments; Delivery also ₹20
+    // DP: ₹12.5+GST; MTF 0.026%/day = 9.49% p.a.; Normal Pledge ₹50+GST, MTF Pledge ₹25+GST
+    // AMC: ₹300/yr (₹25/month)
+    intraday:{flat:20,pct:0},     delivery:{flat:20,pct:0}, futures:{flat:20,pct:0}, options:{flat:20,pct:0},
+    currency:{flat:20,pct:0},     commodity:{flat:20,pct:0},
+    dpCharge:12.5, etcExtra:0, deliveryNote:'₹20 flat', mtfRate:.0949, slbmFee:.001,
+    pledgeCharge:50, unpledgeCharge:0, amc:300, amcNote:'₹25/month' },
+
+  { id:'groww',     name:'Groww',        short:'G',   lc:'g',  type:'Discount',
+    // Official Jun 2026: ₹20 or 0.05% lower for Intraday & Delivery; F&O ₹20 flat
+    // DP: ₹20 (₹3.50 CDSL + ₹16.50 Groww) + GST; MTF 15.75% p.a. (<₹25L, hiked Jun 2025)
+    // No Currency or Commodity segment; AMC: ₹0 — Lifetime free
+    intraday:{flat:20,pct:.0005}, delivery:{flat:20,pct:.0005}, futures:{flat:20,pct:0}, options:{flat:20,pct:0},
+    currency:{flat:0,pct:0},      commodity:{flat:0,pct:0},
+    dpCharge:20, etcExtra:0, deliveryNote:'₹20 or 0.05%', mtfRate:.1575, slbmFee:.001,
+    pledgeCharge:20, unpledgeCharge:20, amc:0, amcNote:'Lifetime FREE',
+    note:'No currency or commodity segment' },
+
+  // FULL-SERVICE BROKERS
+  { id:'icicidirect', name:'ICICI Direct', short:'IC', lc:'ic', type:'Full Service',
+    // iValue plan (₹299 one-time): ₹20 flat for Intraday/F&O; Delivery 0.29% (MoneySaver default)
+    // MTF: 17.99% p.a. standard (iValue plan); 9.85% p.a. for Prime plan customers
+    // DP: ₹20+GST; Pledge ₹35+GST, Unpledge ₹35+GST
+    // AMC: ₹700/yr standard; ₹300 on iValue plan
+    intraday:{flat:20,pct:.00029}, delivery:{flat:0,pct:.0029}, futures:{flat:20,pct:0}, options:{flat:20,pct:0},
+    currency:{flat:20,pct:.00029}, commodity:{flat:20,pct:.00029},
+    dpCharge:20, etcExtra:0, deliveryNote:'0.29%', mtfRate:.1799, slbmFee:.001,
+    pledgeCharge:35, unpledgeCharge:35, amc:700, amcNote:'₹300 on iValue plan' },
+
+  { id:'hdfcsky',   name:'HDFC Sky',     short:'HD',  lc:'hd', type:'Discount',
+    // HDFC Sky (discount arm): ₹20 flat intraday/F&O; delivery ₹20 or 0.1%
+    // AMC: ₹300/yr (HDFC Sky discount plan)
+    intraday:{flat:20,pct:.001},  delivery:{flat:20,pct:.001}, futures:{flat:20,pct:.001}, options:{flat:20,pct:0},
+    currency:{flat:20,pct:.001},  commodity:{flat:20,pct:0},
+    dpCharge:20, etcExtra:0, deliveryNote:'₹20 or 0.1%', mtfRate:.1799, slbmFee:.001,
+    pledgeCharge:20, unpledgeCharge:20, amc:300, amcNote:'₹300/yr' },
+
+  { id:'kotak',     name:'Kotak Neo',    short:'KO',  lc:'ko', type:'Full Service',
+    // Trade Free Plan: ₹10/order intraday & F&O; delivery 0.20%
+    // AMC: ₹600/yr
+    intraday:{flat:10,pct:.0005}, delivery:{flat:0,pct:.002}, futures:{flat:10,pct:0}, options:{flat:10,pct:0},
+    currency:{flat:10,pct:.0005}, commodity:{flat:10,pct:0},
+    dpCharge:19.94, etcExtra:0, deliveryNote:'0.20%', mtfRate:.1750, slbmFee:.001,
+    pledgeCharge:25, unpledgeCharge:25, amc:600, amcNote:'₹600/yr' },
+
+  { id:'sbisec',    name:'SBI Securities', short:'SB', lc:'sb', type:'Full Service',
+    // Standard plan: Intraday 0.05% or ₹20; Delivery 0.50%; F&O ₹20 flat
+    // AMC: ₹350/yr
+    intraday:{flat:20,pct:.0005}, delivery:{flat:0,pct:.005}, futures:{flat:20,pct:0}, options:{flat:20,pct:0},
+    currency:{flat:20,pct:.0005}, commodity:{flat:20,pct:0},
+    dpCharge:20, etcExtra:0, deliveryNote:'0.50%', mtfRate:.18, slbmFee:.001,
+    pledgeCharge:30, unpledgeCharge:30, amc:350, amcNote:'₹350/yr' },
+
+  // NEW APPS — Sahi, Zebu, Shoonya
+  { id:'sahi',      name:'Sahi',           short:'SH',  lc:'sh', type:'Discount',
+    // Flat ₹10/order across all segments (equity, intraday, delivery, F&O); no commodity
+    // AMC: ₹0 — Free
+    intraday:{flat:10,pct:.0005}, delivery:{flat:10,pct:0}, futures:{flat:10,pct:0}, options:{flat:10,pct:0},
+    currency:{flat:10,pct:.0005}, commodity:{flat:0,pct:0},  // No commodity segment
+    dpCharge:13.5, etcExtra:0, deliveryNote:'₹10 flat', mtfRate:.18, slbmFee:.001,
+    pledgeCharge:15, unpledgeCharge:0, amc:0, amcNote:'FREE',
+    note:'No commodity segment currently' },
+
+  { id:'zebu',      name:'Zebu',           short:'ZE',  lc:'ze', type:'Discount',
+    // Delivery 0.1% or ₹20; Intraday 0.01% or ₹20; F&O 0.01% or ₹20; Options ₹20/lot
+    // AMC: ₹300/yr
+    intraday:{flat:20,pct:.0001}, delivery:{flat:20,pct:.001}, futures:{flat:20,pct:.0001}, options:{flat:20,pct:0},
+    currency:{flat:20,pct:.0001}, commodity:{flat:20,pct:.0001},
+    dpCharge:13.5, etcExtra:0, deliveryNote:'₹20 or 0.1%', mtfRate:.18, slbmFee:.001,
+    pledgeCharge:15, unpledgeCharge:15, amc:300, amcNote:'₹300/yr' },
+
+  { id:'shoonya',   name:'Shoonya',        short:'SN',  lc:'sn', type:'Discount',
+    // Delivery Free; Intraday/Futures 0.03% or ₹5 (lower); Options flat ₹5; no MTF
+    // AMC: ₹0 — Lifetime free (Finvasia)
+    intraday:{flat:5,pct:.0003}, delivery:{flat:0,pct:0}, futures:{flat:5,pct:.0003}, options:{flat:5,pct:0},
+    currency:{flat:5,pct:.0003}, commodity:{flat:5,pct:.0003},
+    dpCharge:13.5, etcExtra:0, deliveryNote:'Free', mtfRate:0, slbmFee:.001,
+    pledgeCharge:0, unpledgeCharge:0, amc:0, amcNote:'Lifetime FREE',
+    note:'No MTF. ₹5 or 0.03% whichever lower for intraday/futures' },
+
+  // ── NEW BROKERS (Jun 2026) ──────────────────────────────────────────────────
+  { id:'iifl',      name:'IIFL Securities', short:'II', lc:'ii', type:'Full Service',
+    // Zero brokerage plan: Delivery free, Intraday/Futures ₹20 or 0.05% lower, Options ₹20, Commodity ₹20
+    // AMC: ₹0 BSDA (holdings ≤₹4L); ₹400/yr standard
+    intraday:{flat:20,pct:.0005}, delivery:{flat:0,pct:0}, futures:{flat:20,pct:.0005}, options:{flat:20,pct:0},
+    currency:{flat:20,pct:.0005}, commodity:{flat:20,pct:.0005},
+    dpCharge:25, etcExtra:0, deliveryNote:'Free (Zero Plan)', mtfRate:.15, slbmFee:.001,
+    pledgeCharge:10, unpledgeCharge:0, amc:400, amcNote:'Free 1st yr; ₹400 from yr 2' },
+
+  { id:'indmoney',  name:'INDmoney',        short:'IM', lc:'im', type:'Discount',
+    // Flat ₹20/order Intraday, Futures, Options; Delivery free; No currency/commodity
+    // AMC: ₹0 — Free
+    intraday:{flat:20,pct:0}, delivery:{flat:0,pct:0}, futures:{flat:20,pct:0}, options:{flat:20,pct:0},
+    currency:{flat:0,pct:0}, commodity:{flat:0,pct:0},
+    dpCharge:18.5, etcExtra:0, deliveryNote:'Free', mtfRate:.146, slbmFee:.001,
+    pledgeCharge:20, unpledgeCharge:20, amc:0, amcNote:'FREE',
+    note:'No currency or commodity segment' },
+
+  { id:'mstock',    name:'m.Stock (Mirae)', short:'MS', lc:'ms', type:'Discount',
+    // Standard ₹149 plan: Delivery free; Intraday/Futures/Options ₹5 flat; No commodity
+    // AMC: ₹0 after ₹999 one-time lifetime fee; else ₹876/yr (₹219/qtr)
+    intraday:{flat:5,pct:0}, delivery:{flat:0,pct:0}, futures:{flat:5,pct:0}, options:{flat:5,pct:0},
+    currency:{flat:5,pct:0}, commodity:{flat:0,pct:0},
+    dpCharge:12, etcExtra:0, deliveryNote:'Free', mtfRate:.1499, slbmFee:.001,
+    pledgeCharge:32, unpledgeCharge:32, amc:876, amcNote:'₹0 w/ ₹999 lifetime plan (else ₹219/qtr)',
+    note:'No commodity segment. Zero Brokerage plan at ₹999 one-time.' },
+
+  { id:'paytmmoney', name:'Paytm Money',    short:'PM', lc:'pm', type:'Discount',
+    // Flat ₹20/order all segments; Delivery free; MTF from 7.99%
+    // AMC: ₹0 — Free
+    intraday:{flat:20,pct:0}, delivery:{flat:0,pct:0}, futures:{flat:20,pct:0}, options:{flat:20,pct:0},
+    currency:{flat:20,pct:0}, commodity:{flat:0,pct:0},
+    dpCharge:20, etcExtra:0, deliveryNote:'Free', mtfRate:.0799, slbmFee:.001,
+    pledgeCharge:15, unpledgeCharge:15, amc:0, amcNote:'FREE',
+    note:'No commodity segment' },
+
+  { id:'choicebroking', name:'Choice Broking', short:'CB', lc:'cb', type:'Full Service',
+    // Delivery 0.20%; Intraday/Futures/Currency/Commodity 0.02%; Options ₹25/lot flat
+    // AMC: ₹200/yr (free 1st yr); Lifetime plan ₹1500 one-time
+    intraday:{flat:0,pct:.0002}, delivery:{flat:0,pct:.002}, futures:{flat:0,pct:.0002}, options:{flat:25,pct:0},
+    currency:{flat:0,pct:.0002}, commodity:{flat:0,pct:.0002},
+    dpCharge:10, etcExtra:0, deliveryNote:'0.20%', mtfRate:.18, slbmFee:.001,
+    pledgeCharge:25, unpledgeCharge:0, amc:200, amcNote:'Free 1st yr; ₹200 from yr 2' },
+
+  { id:'sharemarket', name:'Share.Market',   short:'SM', lc:'sm', type:'Discount',
+    // PhonePe: Zero brokerage all segments; No currency/commodity/MTF/SLBM
+    // AMC: ₹0 — Free
+    intraday:{flat:0,pct:0}, delivery:{flat:0,pct:0}, futures:{flat:0,pct:0}, options:{flat:0,pct:0},
+    currency:{flat:0,pct:0}, commodity:{flat:0,pct:0},
+    dpCharge:13.5, etcExtra:0, deliveryNote:'Free', mtfRate:0, slbmFee:.001,
+    pledgeCharge:0, unpledgeCharge:0, amc:0, amcNote:'FREE',
+    note:'No currency/commodity/MTF. PhonePe Wealth Broking.' },
+];
+
+function setSegment(s) {
+  currentSeg = s;
+  const segs = ['intraday','delivery','futures','options','currency','commodity','mtf','slbm','pledge','amc'];
+  document.querySelectorAll('.seg-btn').forEach((b,i) => {
+    b.classList.remove('active','is-mtf','is-slbm','is-pledge');
+    if (segs[i]===s) {
+      b.classList.add('active');
+      if (s==='mtf') b.classList.add('is-mtf');
+      if (s==='slbm') b.classList.add('is-slbm');
+      if (s==='pledge') b.classList.add('is-pledge');
+    }
+  });
+  const stdSegs = ['intraday','delivery','futures','options'];
+  document.getElementById('stdPanel').style.display     = stdSegs.includes(s)?'block':'none';
+  document.getElementById('currencyPanel').style.display  = s==='currency'?'block':'none';
+  document.getElementById('commodityPanel').style.display = s==='commodity'?'block':'none';
+  document.getElementById('mtfPanel').style.display     = s==='mtf'?'block':'none';
+  document.getElementById('slbmPanel').style.display    = s==='slbm'?'block':'none';
+  document.getElementById('pledgePanel').style.display  = s==='pledge'?'block':'none';
+  document.getElementById('amcPanel').style.display     = s==='amc'?'block':'none';
+  document.getElementById('lotField').style.display    = (s==='futures'||s==='options')?'block':'none';
+  document.getElementById('premField').style.display   = s==='options'?'block':'none';
+  document.getElementById('qtyLabel').textContent      = (s==='futures'||s==='options')?'No. of Lots':'Quantity (Shares)';
+  const titles = {intraday:'Intraday',delivery:'Delivery',futures:'Eq Futures',options:'Eq Options',currency:'Currency',commodity:'Commodity',mtf:'MTF',slbm:'SLBM',pledge:'Pledge',amc:'AMC'};
+  document.getElementById('segLabelTitle').textContent = titles[s]||s;
+  document.getElementById('segBadge').textContent = titles[s]||s;
+  clearGrid();
+  if (s==='mtf') calcMTF();
+  else if (s==='slbm') calcSLBM();
+  else if (s==='pledge') calcPledge();
+  else if (s==='currency') calcCurrency();
+  else if (s==='commodity') calcCommodity();
+  else if (s==='amc') calcAMC();
+  else calculate();
+}
+
+function clearGrid() {
+  document.getElementById('brokerGrid').innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">📊</div><p>Click Calculate to compare charges</p></div>`;
+  document.getElementById('summaryBar').style.display='none';
+  lastResults=[];
+}
+
+function fmt(n) { return '₹'+Math.abs(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function r2(n) { return '₹'+parseFloat(n||0).toFixed(2); }
+
+function calcCharges(b, seg, buyVal, sellVal, qty, premium) {
+  const cfg = b[seg]; let brok = 0;
+  const t = buyVal + sellVal;
+  const premTurnover = (premium||0) * qty;
+
+  // ── BROKERAGE ────────────────────────────────────────────────────────────────
+  if (seg==='delivery' && cfg.flat===0 && cfg.pct===0) {
+    brok = 0;
+  } else if (cfg.flat>0 && cfg.pct>0) {
+    brok = Math.min(cfg.flat, buyVal*cfg.pct) + Math.min(cfg.flat, sellVal*cfg.pct);
+  } else if (cfg.flat>0) {
+    brok = cfg.flat * 2;
+  } else if (cfg.pct>0) {
+    brok = t * cfg.pct;
+  }
+
+  // ── STT — Budget 2026: Futures 0.05% sell | Options 0.15% sell premium (eff. 1 Apr 2026)
+  let stt = 0;
+  if      (seg==='intraday') stt = sellVal * 0.00025;       // 0.025% sell side (unchanged)
+  else if (seg==='delivery') stt = t * 0.001;               // 0.1% both sides (unchanged)
+  else if (seg==='futures')  stt = sellVal * 0.0005;        // 0.05% sell side (Budget 2026 ↑ from 0.02%)
+  else if (seg==='options')  stt = premTurnover * 0.0015;   // 0.15% sell-side premium (Budget 2026 ↑ from 0.10%)
+
+  // ── NSE Exchange Transaction Charges + IPFT + Broker Clearing ───────────────
+  // NSE Base (Oct 1 2024): Equity 0.00297% | Futures 0.00173% | Options premium 0.03503%
+  // IPFT (NSE): Equity/Futures Rs0.10/lakh = 0.000001 | Options Rs0.50/lakh premium = 0.000005
+  // b.etcExtra = broker-specific extra (clearing + any IPFT already bundled)
+  //   Upstox: 0.0000048 (NSE clearing + IPFT, verified from official calculator)
+  //   Others: 0 (IPFT added separately below, NSE base only)
+  const etcExtra = b.etcExtra || 0;
+  let exc = 0;
+  if      (seg==='intraday'||seg==='delivery') {
+    // For brokers with etcExtra, it already includes IPFT. For others, add IPFT explicitly.
+    const ipftPart = etcExtra > 0 ? 0 : 0.000001; // avoid double count
+    exc = t * (0.0000297 + ipftPart + etcExtra);
+  }
+  else if (seg==='futures')   exc = t * (0.0000173 + 0.000001);              // NSE + IPFT
+  else if (seg==='options')   exc = premTurnover * 2 * (0.0003503 + 0.000005); // NSE + IPFT
+
+  // ── SEBI Turnover Charges ─────────────────────────────────────────────────────
+  // Rs10 per crore = 0.000001 on total turnover (both sides) — shown separately on contract notes
+  const sebi = t * 0.000001;
+
+  // ── DP Charges (Delivery SELL only — Demat debit per scrip) ─────────────────
+  // Only applies to delivery trades (not intraday/F&O)
+  // Included in GST base as per official broker contract notes
+  const dp = (seg==='delivery') ? (b.dpCharge || 0) : 0;
+
+  // ── Stamp Duty — buy side only (post-2020 uniform rate) ────────────────────
+  let stamp = 0;
+  if      (seg==='intraday') stamp = buyVal * 0.00003;
+  else if (seg==='delivery') stamp = buyVal * 0.00015;
+  else if (seg==='futures')  stamp = buyVal * 0.00002;
+  else if (seg==='options')  stamp = premTurnover * 0.00003;
+
+  // ── GST 18% ───────────────────────────────────────────────────────────────────
+  // Applies to: Brokerage + Exchange Charges (IPFT folded in) + SEBI + DP charges
+  // Does NOT apply to: STT, Stamp Duty (statutory taxes)
+  const gst = (brok + exc + sebi + dp) * 0.18;
+
+  return { brok, stt, exc, sebi, dp, stamp, gst,
+           total: brok + stt + exc + sebi + dp + stamp + gst };
+}
+
+function calcCurrency() {
+  const type = document.getElementById('currType').value;
+  const buy  = parseFloat(document.getElementById('currBuy').value)||0;
+  const sell = parseFloat(document.getElementById('currSell').value)||0;
+  const lots = parseInt(document.getElementById('currLots').value)||0;
+  const lotSz= parseInt(document.getElementById('currLotSize').value)||1000;
+  const prem = parseFloat(document.getElementById('currPrem').value)||0;
+  document.getElementById('currPremField').style.display = type==='options'?'block':'none';
+  if (!buy||!lots) { clearGrid(); return; }
+  const qty = lots * lotSz;
+  const bv = buy*qty, sv = sell*qty, gpl = (sell-buy)*qty;
+  const premTV = prem * qty;
+  const eligibleCurrBrokers = BROKERS.filter(b => b.currency && (b.currency.flat>0 || b.currency.pct>0));
+  const results = eligibleCurrBrokers.map(b => {
+    const cfg = b.currency; let brok=0;
+    if (cfg.flat>0 && cfg.pct>0) brok = Math.min(cfg.flat,bv*cfg.pct)+Math.min(cfg.flat,sv*cfg.pct);
+    else if (cfg.flat>0) brok = cfg.flat*2;
+    else if (cfg.pct>0) brok = (bv+sv)*cfg.pct;
+    const tv = bv+sv;
+    const exc = type==='options' ? premTV*2*0.002 : tv*0.000035;
+    const sebi = tv*0.000001;
+    const stamp = type==='options' ? premTV*0.00003 : bv*0.00002;
+    const gst = (brok+exc+sebi)*0.18;
+    const total = brok+exc+sebi+stamp+gst;
+    return {...b, charges:{brok,stt:0,exc,sebi,dp:0,stamp,gst,total}, grossPL:gpl, buyVal:bv};
+  });
+  currentSeg='currency';
+  renderCards(results,bv,gpl,false,null);
+}
+
+function calcCommodity() {
+  const type   = document.getElementById('commType').value;
+  const buy    = parseFloat(document.getElementById('commBuy').value)||0;
+  const sell   = parseFloat(document.getElementById('commSell').value)||0;
+  const lots   = parseInt(document.getElementById('commLots').value)||0;
+  const lotSz  = parseInt(document.getElementById('commLotSize').value)||1;
+  const prem   = parseFloat(document.getElementById('commPrem').value)||0;
+  document.getElementById('commPremField').style.display = type==='options'?'block':'none';
+  if (!buy||!lots) { clearGrid(); return; }
+  const qty = lots*lotSz;
+  const bv = buy*qty, sv = sell*qty, gpl = (sell-buy)*qty;
+  const premTV = prem*qty;
+  const tv = bv+sv;
+  // Filter to only brokers that support commodity (commodity.flat>0 OR commodity.pct>0)
+  const eligibleBrokers = BROKERS.filter(b => b.commodity && (b.commodity.flat>0 || b.commodity.pct>0));
+  const results = eligibleBrokers.map(b => {
+    const cfg = b.commodity; let brok=0;
+    if (cfg.flat>0 && cfg.pct>0) brok = Math.min(cfg.flat,bv*cfg.pct)+Math.min(cfg.flat,sv*cfg.pct);
+    else if (cfg.flat>0) brok = cfg.flat*2;
+    else if (cfg.pct>0) brok = tv*cfg.pct;
+    const ctt = type==='futures' ? sv*0.0001 : type==='agri' ? 0 : premTV*0.0005;
+    const exc = type==='options' ? premTV*2*0.00105 : tv*0.0000210;
+    const sebi = tv*0.000001;
+    const stamp = type==='options' ? premTV*0.00003 : bv*0.00002;
+    const gst = (brok+exc+sebi)*0.18;
+    const total = brok+ctt+exc+sebi+stamp+gst;
+    return {...b, charges:{brok,stt:0,ctt,exc,sebi,dp:0,stamp,gst,total}, grossPL:gpl, buyVal:bv};
+  });
+  currentSeg='commodity';
+  renderCommodity(results,tv,gpl,type);
+}
+
+function renderCommodity(results,tradeVal,grossPL,commType) {
+  const sorted = [...results].sort((a,b)=>a.charges.total-b.charges.total);
+  const mn=sorted[0].charges.total, mx=sorted[sorted.length-1].charges.total;
+  setSummary(tradeVal,grossPL,mn,mx,'Gross P&L');
+  lastResults=sorted;
+  const cttLabel = commType==='agri'?'CTT (Agri Exempt)':commType==='options'?'CTT 0.05% (Option Sell)':'CTT 0.01% (Non-Agri Sell)';
+  const cards=sorted.map((r,idx)=>{
+    const c=r.charges, isMin=idx===0, netPL=grossPL-c.total;
+    return `<div class="broker-card ${isMin?'cheapest':''}">
+      <div class="broker-header">
+        <div class="broker-logo ${r.lc}">${r.short}</div>
+        <div><div class="broker-name">#${idx+1} ${r.name}</div><div class="broker-type">${r.type}</div></div>
+      </div>
+      <div class="charge-rows">
+        <div class="charge-row section-head slbm-head"><span class="lbl">▸ MCX Commodity</span></div>
+        <div class="charge-row"><span class="lbl">Brokerage</span><span class="val">${fmt(c.brok)}</span></div>
+        <div class="charge-row"><span class="lbl">${cttLabel}</span><span class="val" style="color:${c.ctt===0?'var(--green)':'var(--accent2)'}">${c.ctt===0?'EXEMPT':fmt(c.ctt)}</span></div>
+        <div class="charge-row"><span class="lbl">MCX Exch. Charges</span><span class="val">${fmt(c.exc)}</span></div>
+        <div class="charge-row"><span class="lbl">SEBI Turnover Fee</span><span class="val">${fmt(c.sebi)}</span></div>
+        <div class="charge-row"><span class="lbl">GST (18%)</span><span class="val">${fmt(c.gst)}</span></div>
+        <div class="charge-row"><span class="lbl">Stamp Duty</span><span class="val">${fmt(c.stamp||0)}</span></div>
+        <div class="charge-row total"><span class="lbl">Total Charges</span><span class="val">${fmt(c.total)}</span></div>
+      </div>
+      <div class="net-pl"><span class="lbl">Net P&amp;L</span><span class="val ${netPL>=0?'profit':'loss'}">${netPL>=0?'+':'-'}${fmt(Math.abs(netPL))}</span></div>
+    </div>`;
+  });
+  document.getElementById('brokerGrid').innerHTML=cards.join('');
+}
+
+function calculate() {
+  const buyPrice=parseFloat(document.getElementById('buyPrice').value)||0;
+  const sellPrice=parseFloat(document.getElementById('sellPrice').value)||0;
+  const qty=parseInt(document.getElementById('qty').value)||0;
+  const lotSize=parseInt(document.getElementById('lotSize').value)||1;
+  const premium=parseFloat(document.getElementById('premium').value)||0;
+  const seg=currentSeg;
+  if (!buyPrice||!sellPrice||!qty) { clearGrid(); return; }
+  const isFO=seg==='futures'||seg==='options';
+  const aq=isFO?qty*lotSize:qty;
+  const bv=buyPrice*aq, sv=sellPrice*aq;
+  const gpl=(sellPrice-buyPrice)*aq;
+  const results=BROKERS.map(b=>({...b,charges:calcCharges(b,seg,bv,sv,aq,premium),grossPL:gpl,buyVal:bv}));
+  renderCards(results,bv,gpl,false,null);
+}
+
+function calcMTF() {
+  const buyPrice=parseFloat(document.getElementById('mtfBuy').value)||0;
+  const sellPrice=parseFloat(document.getElementById('mtfSell').value)||0;
+  const qty=parseInt(document.getElementById('mtfQty').value)||0;
+  const margin=parseFloat(document.getElementById('mtfMargin').value)||0;
+  const days=parseInt(document.getElementById('mtfDays').value)||1;
+  if (!buyPrice||!qty) { clearGrid(); return; }
+  const bv=buyPrice*qty, sv=sellPrice*qty, gpl=(sellPrice-buyPrice)*qty;
+  const funded=Math.max(0,bv-margin);
+  const eligible = BROKERS.filter(b=>b.mtfRate>0);
+  const results=eligible.map(b=>{
+    const base=calcCharges(b,'delivery',bv,sv,qty,0);
+    const interest=funded*(b.mtfRate/365)*days;
+    const intGST=interest*.18;
+    return {...b,charges:{...base,mtfInterest:interest,mtfGst:intGST,total:base.total+interest+intGST},grossPL:gpl,funded};
+  });
+  renderCards(results,bv,gpl,true,{funded,days});
+}
+
+function calcSLBM() {
+  const price=parseFloat(document.getElementById('slbmPrice').value)||0;
+  const qty=parseInt(document.getElementById('slbmQty').value)||0;
+  const rate=parseFloat(document.getElementById('slbmRate').value)||0;
+  const days=parseInt(document.getElementById('slbmDays').value)||1;
+  const role=document.getElementById('slbmRole').value;
+  if (!price||!qty||!rate) { clearGrid(); return; }
+  const txnVal=price*qty;
+  const gross=txnVal*(rate/100)*(days/365);
+  const results=BROKERS.map(b=>{
+    const fee=txnVal*b.slbmFee, gst=fee*.18, sebi=txnVal*.000001;
+    const total=fee+gst+sebi;
+    return {...b,charges:{slbmFee:fee,gst,sebi,total},grossPL:gross,txnVal,role,gross};
+  });
+  renderSLBM(results,txnVal,gross,rate,days,role);
+}
+
+function renderCards(results,tradeVal,grossPL,isMTF,extra) {
+  // Sort by total charges: lowest first
+  const sorted = [...results].sort((a,b)=>a.charges.total - b.charges.total);
+  const mn=sorted[0].charges.total, mx=sorted[sorted.length-1].charges.total;
+  setSummary(tradeVal,grossPL,mn,mx,'Gross P&L');
+  lastResults=sorted;
+  const cards=sorted.map((r,idx)=>{
+    const c=r.charges, isMin=idx===0, netPL=grossPL-c.total;
+    const isFreeDelivery = (currentSeg==='delivery' && r.delivery.flat===0 && r.delivery.pct===0);
+    const freeNote = isFreeDelivery ? `<span style="color:#16A34A;font-size:10px;font-weight:700;margin-left:4px">✓ Free</span>` : '';
+    let mtfExtra='';
+    if(isMTF) mtfExtra=`
+      <div class="charge-row section-head mtf-head"><span class="lbl">▸ MTF Charges</span></div>
+      <div class="charge-row"><span class="lbl">Funded Amount</span><span class="val">${fmt(r.funded)}</span></div>
+      <div class="charge-row"><span class="lbl">Interest Rate</span><span class="val" style="color:var(--purple)">${(r.mtfRate*100).toFixed(2)}% p.a.</span></div>
+      <div class="charge-row"><span class="lbl">MTF Interest</span><span class="val" style="color:var(--purple)">${fmt(c.mtfInterest)}</span></div>
+      <div class="charge-row"><span class="lbl">GST on Interest (18%)</span><span class="val">${fmt(c.mtfGst)}</span></div>`;
+    return `<div class="broker-card ${isMin?'cheapest':''}">
+      <div class="broker-header">
+        <div class="broker-logo ${r.lc}">${r.short}</div>
+        <div>
+          <div class="broker-name">#${idx+1} ${r.name}${freeNote}</div>
+          <div class="broker-type">${r.type}</div>
+        </div>
+      </div>
+      <div class="charge-rows">
+        <div class="charge-row"><span class="lbl">Brokerage</span><span class="val">${fmt(c.brok)}</span></div>
+        <div class="charge-row"><span class="lbl">STT</span><span class="val">${fmt(c.stt)}</span></div>
+        <div class="charge-row"><span class="lbl">Exch. Charges + IPFT</span><span class="val">${fmt(c.exc)}</span></div>
+        <div class="charge-row"><span class="lbl">SEBI Turnover Fee</span><span class="val">${fmt(c.sebi)}</span></div>
+        ${c.dp>0?`<div class="charge-row"><span class="lbl">DP Charges (per scrip)</span><span class="val">${fmt(c.dp)}</span></div>`:''}
+        <div class="charge-row"><span class="lbl">GST (18%)</span><span class="val">${fmt(c.gst)}</span></div>
+        <div class="charge-row"><span class="lbl">Stamp Duty</span><span class="val">${fmt(c.stamp||0)}</span></div>
+        ${mtfExtra}
+        <div class="charge-row total"><span class="lbl">Total Charges</span><span class="val">${fmt(c.total)}</span></div>
+      </div>
+      <div class="net-pl"><span class="lbl">Net P&amp;L</span><span class="val ${netPL>=0?'profit':'loss'}">${netPL>=0?'+':'-'}${fmt(Math.abs(netPL))}</span></div>
+    </div>`;
+  });
+  document.getElementById('brokerGrid').innerHTML=cards.join('');
+}
+
+function renderSLBM(results,txnVal,gross,rate,days,role) {
+  const sorted = [...results].sort((a,b)=>a.charges.total - b.charges.total);
+  const mn=sorted[0].charges.total, mx=sorted[sorted.length-1].charges.total;
+  document.getElementById('sumPLLabel').textContent=role==='lender'?'Gross Income':'Gross Cost';
+  setSummary(txnVal,gross,mn,mx,role==='lender'?'Gross Income':'Gross Cost');
+  lastResults=sorted;
+  const cards=sorted.map((r,idx)=>{
+    const c=r.charges, isMin=idx===0;
+    const net=role==='lender'?gross-c.total:-(gross+c.total);
+    return `<div class="broker-card ${isMin?'cheapest':''}">
+      <div class="broker-header"><div class="broker-logo ${r.lc}">${r.short}</div><div><div class="broker-name">${r.name}</div><div class="broker-type">${r.type}</div></div></div>
+      <div class="charge-rows">
+        <div class="charge-row section-head slbm-head"><span class="lbl">▸ SLBM Details</span></div>
+        <div class="charge-row"><span class="lbl">Transaction Value</span><span class="val">${fmt(txnVal)}</span></div>
+        <div class="charge-row"><span class="lbl">Lending Rate</span><span class="val">${rate}% p.a.</span></div>
+        <div class="charge-row"><span class="lbl">Period</span><span class="val">${days} days</span></div>
+        <div class="charge-row"><span class="lbl">Gross ${role==='lender'?'Income':'Cost'}</span><span class="val" style="color:${role==='lender'?'var(--green)':'var(--red)'}">${fmt(gross)}</span></div>
+        <div class="charge-row section-head slbm-head"><span class="lbl">▸ Platform Charges</span></div>
+        <div class="charge-row"><span class="lbl">SLBM Txn Fee (0.10%)</span><span class="val">${fmt(c.slbmFee)}</span></div>
+        <div class="charge-row"><span class="lbl">GST (18%)</span><span class="val">${fmt(c.gst)}</span></div>
+        <div class="charge-row"><span class="lbl">SEBI Charges</span><span class="val">${fmt(c.sebi)}</span></div>
+        <div class="charge-row total"><span class="lbl">Total Charges</span><span class="val">${fmt(c.total)}</span></div>
+      </div>
+      <div class="net-pl"><span class="lbl">Net ${role==='lender'?'Income':'Cost'}</span><span class="val ${net>=0?'profit':'loss'}">${net>=0?'+':'-'}${fmt(Math.abs(net))}</span></div>
+    </div>`;
+  });
+  document.getElementById('brokerGrid').innerHTML=cards.join('');
+}
+
+function calcPledge() {
+  const stockVal  = parseFloat(document.getElementById('pledgeStockVal').value) || 0;
+  const isins     = parseInt(document.getElementById('pledgeISINs').value) || 1;
+  const haircut   = parseFloat(document.getElementById('pledgeHaircut').value) || 0;
+  const action    = document.getElementById('pledgeAction').value;
+  if (!stockVal || !isins) { clearGrid(); return; }
+
+  const collateral = stockVal * (1 - haircut / 100);
+
+  const results = BROKERS.map(b => {
+    const pc = b.pledgeCharge   || 0;
+    const uc = b.unpledgeCharge || 0;
+    let pledgeFee = 0, unpledgeFee = 0;
+    if (action === 'pledge' || action === 'both') pledgeFee   = pc * isins * 1.18;
+    if (action === 'unpledge' || action === 'both') unpledgeFee = uc * isins * 1.18;
+    const total = pledgeFee + unpledgeFee;
+    return {
+      ...b,
+      pledgeFee, unpledgeFee, total,
+      pledgeBase: pc, unpledgeBase: uc,
+      charges: { total }  // for sort compatibility
+    };
+  });
+
+  renderPledge(results, stockVal, collateral, isins, haircut, action);
+}
+
+function renderPledge(results, stockVal, collateral, isins, haircut, action) {
+  const sorted = [...results].sort((a,b) => a.total - b.total);
+  const mn = sorted[0].total, mx = sorted[sorted.length-1].total;
+  lastResults = sorted;
+
+  // Summary bar — collateral info
+  document.getElementById('summaryBar').style.display = 'flex';
+  document.getElementById('sumTV').textContent = fmt(stockVal);
+  document.getElementById('sumPLLabel').textContent = 'Collateral Margin';
+  const plEl = document.getElementById('sumPL');
+  plEl.textContent = fmt(collateral);
+  plEl.style.color = 'var(--green)';
+  document.getElementById('sumLow').textContent  = fmt(mn);
+  document.getElementById('sumHigh').textContent = fmt(mx);
+  document.getElementById('sumSave').textContent = fmt(mx - mn);
+
+  const actionLabel = { pledge:'Pledge Only', unpledge:'Unpledge Only', both:'Pledge + Unpledge' }[action];
+
+  const cards = sorted.map((r, idx) => {
+    const isMin = idx === 0;
+    const isFree = r.total === 0;
+    const freeTag = isFree ? `<span style="color:#16A34A;font-size:10px;font-weight:700;margin-left:4px">✓ FREE</span>` : '';
+    return `<div class="broker-card ${isMin ? 'cheapest' : ''}">
+      <div class="broker-header">
+        <div class="broker-logo ${r.lc}">${r.short}</div>
+        <div>
+          <div class="broker-name">#${idx+1} ${r.name}${freeTag}</div>
+          <div class="broker-type">${r.type}</div>
+        </div>
+      </div>
+      <div class="charge-rows">
+        <div class="charge-row section-head" style="border:none"><span class="lbl" style="color:#0F766E;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase">▸ ${actionLabel}</span></div>
+        <div class="charge-row"><span class="lbl">Per ISIN — Pledge</span>
+          <span class="val">${r.pledgeBase === 0 ? '<span style="color:#16A34A;font-weight:700">FREE</span>' : fmt(r.pledgeBase)+' +GST'}</span></div>
+        <div class="charge-row"><span class="lbl">Per ISIN — Unpledge</span>
+          <span class="val">${r.unpledgeBase === 0 ? '<span style="color:#16A34A;font-weight:700">FREE</span>' : fmt(r.unpledgeBase)+' +GST'}</span></div>
+        <div class="charge-row"><span class="lbl">No. of ISINs</span><span class="val">${isins}</span></div>
+        ${r.pledgeFee > 0 ? `<div class="charge-row"><span class="lbl">Pledge Charges (incl GST)</span><span class="val">${fmt(r.pledgeFee)}</span></div>` : ''}
+        ${r.unpledgeFee > 0 ? `<div class="charge-row"><span class="lbl">Unpledge Charges (incl GST)</span><span class="val">${fmt(r.unpledgeFee)}</span></div>` : ''}
+        <div class="charge-row total"><span class="lbl">Total Charges</span><span class="val" style="color:${r.total===0?'var(--green)':'var(--accent2)'}">${r.total === 0 ? 'FREE' : fmt(r.total)}</span></div>
+      </div>
+      <div class="net-pl">
+        <span class="lbl">Collateral Margin</span>
+        <span class="val profit">+${fmt(collateral)}</span>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('brokerGrid').innerHTML = cards.join('');
+}
+
+function calcAMC() {
+  const sort = document.getElementById('amcSort')?.value || 'amc';
+  let results = BROKERS.map(b => ({ ...b }));
+  if (sort === 'amc') results.sort((a,b) => a.amc - b.amc || a.name.localeCompare(b.name));
+  else if (sort === 'name') results.sort((a,b) => a.name.localeCompare(b.name));
+  else results.sort((a,b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
+  lastResults = results;
+  renderAMC(results);
+}
+
+function renderAMC(results) {
+  const amcVals = results.map(r => r.amc);
+  const mn = Math.min(...amcVals), mx = Math.max(...amcVals);
+  const freeCount = results.filter(r => r.amc === 0).length;
+  // Summary bar
+  document.getElementById('summaryBar').style.display = 'flex';
+  document.getElementById('sumTV').textContent = results.length + ' Brokers';
+  document.getElementById('sumPLLabel').textContent = 'Free AMC Brokers';
+  const plEl = document.getElementById('sumPL');
+  plEl.textContent = freeCount + ' Brokers';
+  plEl.style.color = 'var(--green)';
+  document.getElementById('sumLow').textContent = mn === 0 ? 'FREE' : '₹'+mn+'/yr';
+  document.getElementById('sumHigh').textContent = '₹'+mx+'/yr';
+  document.getElementById('sumSave').textContent = '₹'+mx+'/yr';
+
+  const cards = results.map((r, idx) => {
+    const isFree = r.amc === 0;
+    const isMin = r.amc === mn;
+    const amcIncGst = r.amc > 0 ? (r.amc * 1.18).toFixed(0) : 0;
+    const amcPer5yr = r.amc * 5;
+    const freeTag = isFree ? `<span style="color:#16A34A;font-size:10px;font-weight:700;margin-left:4px;background:#DCFCE7;padding:2px 7px;border-radius:10px">✓ FREE</span>` : '';
+    return `<div class="broker-card ${isMin ? 'cheapest' : ''}">
+      <div class="broker-header">
+        <div class="broker-logo ${r.lc}">${r.short}</div>
+        <div>
+          <div class="broker-name">${r.name}${freeTag}</div>
+          <div class="broker-type">${r.type}</div>
+        </div>
+      </div>
+      <div class="charge-rows">
+        <div class="charge-row total">
+          <span class="lbl">Annual AMC</span>
+          <span class="val" style="color:${isFree?'var(--green)':'var(--accent2)'};font-size:17px">${isFree ? 'FREE' : '₹'+r.amc+' +GST'}</span>
+        </div>
+        ${r.amc > 0 ? '<div class="charge-row"><span class="lbl">AMC incl. GST (18%)</span><span class="val">₹'+amcIncGst+'/yr</span></div>' : ''}
+        ${r.amc > 0 ? '<div class="charge-row"><span class="lbl">5-Year Cost (excl. GST)</span><span class="val">₹'+amcPer5yr.toLocaleString('en-IN')+'</span></div>' : ''}
+        <div class="charge-row"><span class="lbl">Note</span><span class="val" style="font-family:'Inter',sans-serif;font-size:11px;color:var(--muted);text-align:right;max-width:55%">${r.amcNote||'—'}</span></div>
+        <div class="charge-row"><span class="lbl">Broker Type</span><span class="val" style="font-family:'Inter',sans-serif">${r.type}</span></div>
+      </div>
+      <div class="net-pl">
+        <span class="lbl">DP Charge (Sell)</span>
+        <span class="val" style="color:var(--text2)">₹${r.dpCharge}+GST/scrip</span>
+      </div>
+    </div>`;
+  });
+  document.getElementById('brokerGrid').innerHTML = cards.join('');
+}
+
+function setSummary(tv,pl,mn,mx,plLabel) {
+  document.getElementById('summaryBar').style.display='flex';
+  document.getElementById('sumTV').textContent=fmt(tv);
+  const el=document.getElementById('sumPL');
+  el.textContent=(pl>=0?'+':'-')+fmt(Math.abs(pl));
+  el.style.color=pl>=0?'var(--green)':'var(--red)';
+  document.getElementById('sumLow').textContent=fmt(mn);
+  document.getElementById('sumHigh').textContent=fmt(mx);
+  document.getElementById('sumSave').textContent=fmt(mx-mn);
+}
+
+/* ===== EXCEL EXPORT ===== */
+function exportExcel() {
+  if (!lastResults.length) { alert('Please calculate first.'); return; }
+  const segLabel = {intraday:'INTRADAY',delivery:'DELIVERY',futures:'EQ FUTURES',options:'EQ OPTIONS',currency:'CURRENCY F&O',commodity:'MCX COMMODITY',mtf:'MTF',slbm:'SLBM',pledge:'PLEDGE',amc:'AMC'}[currentSeg]||currentSeg.toUpperCase();
+  const now = new Date().toLocaleString('en-IN');
+  const wb = XLSX.utils.book_new();
+
+  let rows = [
+    ['NSE / MCX Brokerage Calculator'],
+    ['Segment: ' + segLabel],
+    ['Generated: ' + now],
+    ['Developed & Designed by: Shamsudeen EP'],
+    []
+  ];
+
+  if (currentSeg === 'pledge') {
+    const action = document.getElementById('pledgeAction')?.value || 'both';
+    const isins  = document.getElementById('pledgeISINs')?.value || 1;
+    rows.push(['Rank','Broker','Type','Per ISIN Pledge (₹)','Per ISIN Unpledge (₹)','No. of ISINs','Pledge Fee incl GST (₹)','Unpledge Fee incl GST (₹)','Total Charges (₹)']);
+    lastResults.forEach((r,i) => {
+      rows.push([i+1, r.name, r.type,
+        r.pledgeBase===0?'FREE':r.pledgeBase.toFixed(2),
+        r.unpledgeBase===0?'FREE':r.unpledgeBase.toFixed(2),
+        isins,
+        r.pledgeFee.toFixed(2), r.unpledgeFee.toFixed(2), r.total.toFixed(2)]);
+    });
+  } else if (currentSeg === 'slbm') {
+    rows.push(['Broker','Type','Txn Value (₹)','Lending Rate','Period (Days)','Gross Income/Cost (₹)','SLBM Fee (₹)','GST (₹)','SEBI (₹)','Total Charges (₹)','Net Income/Cost (₹)']);
+    lastResults.forEach(r => {
+      const c=r.charges, gross=r.gross||0;
+      const role=r.role||'lender', net=role==='lender'?gross-c.total:-(gross+c.total);
+      rows.push([r.name,r.type,+(r.txnVal||0).toFixed(2),r.grossPL,r.grossPL,+gross.toFixed(2),+c.slbmFee.toFixed(2),+c.gst.toFixed(2),+c.sebi.toFixed(2),+c.total.toFixed(2),+net.toFixed(2)]);
+    });
+  } else if (currentSeg === 'mtf') {
+    rows.push(['Broker','Type','Funded Amt (₹)','MTF Rate (% p.a.)','MTF Interest (₹)','GST on Interest (₹)','Brokerage (₹)','STT (₹)','Exchange Fee (₹)','GST (₹)','SEBI (₹)','Stamp (₹)','Total Charges (₹)','Gross P&L (₹)','Net P&L (₹)']);
+    lastResults.forEach(r => {
+      const c=r.charges;
+      rows.push([r.name,r.type,+(r.funded||0).toFixed(2),(r.mtfRate*100).toFixed(2),+c.mtfInterest.toFixed(2),+c.mtfGst.toFixed(2),+c.brok.toFixed(2),+c.stt.toFixed(2),+c.exc.toFixed(2),+c.gst.toFixed(2),+c.sebi.toFixed(2),+(c.stamp||0).toFixed(2),+c.total.toFixed(2),+(r.grossPL||0).toFixed(2),+((r.grossPL||0)-c.total).toFixed(2)]);
+    });
+  } else if (currentSeg === 'commodity') {
+    rows.push(['Rank','Broker','Type','Brokerage (₹)','CTT (₹)','MCX Exch Fee (₹)','SEBI (₹)','GST (₹)','Stamp (₹)','Total Charges (₹)','Gross P&L (₹)','Net P&L (₹)']);
+    lastResults.forEach((r,i) => {
+      const c=r.charges;
+      rows.push([i+1,r.name,r.type,+c.brok.toFixed(2),+(c.ctt||0).toFixed(2),+c.exc.toFixed(2),+c.sebi.toFixed(2),+c.gst.toFixed(2),+(c.stamp||0).toFixed(2),+c.total.toFixed(2),+(r.grossPL||0).toFixed(2),+((r.grossPL||0)-c.total).toFixed(2)]);
+    });
+  } else if (currentSeg === 'amc') {
+    rows.push(['Rank','Broker','Type','AMC (₹/yr, excl GST)','AMC incl GST (₹/yr)','5-Yr Cost (₹)','DP Charge (₹/scrip+GST)','Note']);
+    lastResults.forEach((r,i) => {
+      rows.push([i+1,r.name,r.type,r.amc===0?'FREE':r.amc,r.amc===0?'FREE':(r.amc*1.18).toFixed(0),r.amc===0?0:r.amc*5,r.dpCharge,r.amcNote||'']);
+    });
+  } else {
+    rows.push(['Rank','Broker','Type','Brokerage (₹)',sttLabel,'Exch Fee (₹)','SEBI (₹)','DP Charges (₹)','GST (₹)','Stamp Duty (₹)','Total Charges (₹)','Gross P&L (₹)','Net P&L (₹)']);
+    lastResults.forEach((r,i) => {
+      const c=r.charges;
+      rows.push([i+1,r.name,r.type,+c.brok.toFixed(2),+c.stt.toFixed(2),+c.exc.toFixed(2),+c.sebi.toFixed(2),+(c.dp||0).toFixed(2),+c.gst.toFixed(2),+(c.stamp||0).toFixed(2),+c.total.toFixed(2),+(r.grossPL||0).toFixed(2),+((r.grossPL||0)-c.total).toFixed(2)]);
+    });
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = Array(15).fill({wch:18});
+  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:7}}];
+  XLSX.utils.book_append_sheet(wb, ws, segLabel.substring(0,31) + ' Charges');
+  XLSX.writeFile(wb, 'Brokerage_' + segLabel.replace(/[^A-Z]/g,'_') + '_' + Date.now() + '.xlsx');
+}
+
+/* ===== PDF EXPORT ===== */
+function exportPDF() {
+  if (!lastResults.length) { alert('Please calculate first.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const segLabel = {intraday:'INTRADAY',delivery:'DELIVERY',futures:'EQ FUTURES',options:'EQ OPTIONS',currency:'CURRENCY F&O',commodity:'MCX COMMODITY',mtf:'MTF',slbm:'SLBM',pledge:'PLEDGE',amc:'AMC'}[currentSeg]||currentSeg.toUpperCase();
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+
+  // Background header bar
+  doc.setFillColor(28,43,74);
+  doc.rect(0,0,pageW,44,'F');
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(20);
+  doc.setTextColor(255,255,255);
+  doc.text('NSE / MCX Brokerage Calculator', 14, 15);
+
+  doc.setFontSize(10);
+  doc.setTextColor(148,163,184);
+  doc.text('Segment: ' + segLabel, 14, 24);
+  doc.text('Generated: ' + new Date().toLocaleString('en-IN'), 14, 31);
+
+  doc.setFontSize(8);
+  doc.setTextColor(100,116,139);
+  doc.text('Developed & Designed by Shamsudeen EP', 14, 38);
+
+  let head=[], body=[];
+
+  if (currentSeg==='pledge') {
+    const isins = document.getElementById('pledgeISINs')?.value || 1;
+    head=[['#','Broker','Type','Pledge/ISIN','Unpledge/ISIN','ISINs','Pledge Fee (incl GST)','Unpledge Fee (incl GST)','Total Charges']];
+    body=lastResults.map((r,i)=>[
+      i+1, r.name, r.type,
+      r.pledgeBase===0?'FREE':'Rs.'+r.pledgeBase,
+      r.unpledgeBase===0?'FREE':'Rs.'+r.unpledgeBase,
+      isins,
+      r.pledgeFee===0?'FREE':r2(r.pledgeFee),
+      r.unpledgeFee===0?'FREE':r2(r.unpledgeFee),
+      r.total===0?'FREE':r2(r.total)
+    ]);
+  } else if (currentSeg==='slbm') {
+    head=[['Broker','Type','Txn Value','Gross Income/Cost','SLBM Fee','GST','SEBI','Total Charges','Net Income/Cost']];
+    body=lastResults.map(r=>{
+      const c=r.charges, gross=r.gross||0;
+      const role=r.role||'lender', net=role==='lender'?gross-c.total:-(gross+c.total);
+      return [r.name,r.type,r2(r.txnVal||0),r2(gross),r2(c.slbmFee),r2(c.gst),r2(c.sebi),r2(c.total),r2(net)];
+    });
+  } else if (currentSeg==='mtf') {
+    head=[['Broker','Funded Amt','MTF Rate','MTF Interest','Int GST','Brokerage','STT','Exc Fee','GST','SEBI','Stamp','Total','Gross P&L','Net P&L']];
+    body=lastResults.map(r=>{
+      const c=r.charges;
+      return [r.name,r2(r.funded||0),(r.mtfRate*100).toFixed(1)+'%',r2(c.mtfInterest),r2(c.mtfGst),r2(c.brok),r2(c.stt),r2(c.exc),r2(c.gst),r2(c.sebi),r2(c.stamp||0),r2(c.total),r2(r.grossPL||0),r2((r.grossPL||0)-c.total)];
+    });
+  } else if (currentSeg==='commodity') {
+    head=[['#','Broker','Type','Brokerage','CTT','MCX Exch Fee','SEBI','GST','Stamp','Total Charges','Gross P&L','Net P&L']];
+    body=lastResults.map((r,i)=>{
+      const c=r.charges;
+      return [i+1,r.name,r.type,r2(c.brok),r2(c.ctt||0),r2(c.exc),r2(c.sebi),r2(c.gst),r2(c.stamp||0),r2(c.total),r2(r.grossPL||0),r2((r.grossPL||0)-c.total)];
+    });
+  } else if (currentSeg==='amc') {
+    head=[['#','Broker','Type','AMC (₹/yr)','AMC incl GST','5-Yr Cost','DP Charge','Note']];
+    body=lastResults.map((r,i)=>[i+1,r.name,r.type,r.amc===0?'FREE':'Rs.'+r.amc,r.amc===0?'FREE':'Rs.'+(r.amc*1.18).toFixed(0),r.amc===0?'FREE':'Rs.'+(r.amc*5).toLocaleString('en-IN'),'Rs.'+r.dpCharge+'+GST',r.amcNote||'']);
+  } else {
+    const sttHdr = currentSeg==='currency'?'STT/CTT':'STT';
+    head=[['#','Broker','Type','Brokerage',sttHdr,'Exch Fee','SEBI','DP Charges','GST','Stamp','Total Charges','Gross P&L','Net P&L']];
+    body=lastResults.map((r,i)=>{
+      const c=r.charges;
+      return [i+1,r.name,r.type,r2(c.brok),r2(c.stt),r2(c.exc),r2(c.sebi),r2(c.dp||0),r2(c.gst),r2(c.stamp||0),r2(c.total),r2(r.grossPL||0),r2((r.grossPL||0)-c.total)];
+    });
+  }
+
+  doc.autoTable({
+    head, body,
+    startY: 48,
+    styles:{fontSize:8,cellPadding:3,font:'helvetica',textColor:[30,40,60]},
+    headStyles:{fillColor:[28,43,74],textColor:[255,255,255],fontStyle:'bold',fontSize:8.5},
+    alternateRowStyles:{fillColor:[247,249,252]},
+    bodyStyles:{fillColor:[255,255,255]},
+    tableLineColor:[221,227,236],
+    tableLineWidth:0.3,
+    margin:{left:12,right:12},
+    didDrawPage:(data)=>{
+      doc.setFontSize(7);
+      doc.setTextColor(122,135,153);
+      doc.text('Developed & Designed by Shamsudeen EP  ·  NSE/MCX Brokerage Calculator  ·  All values in INR (Rs.)', 12, pageH-6);
+      doc.text('Page ' + data.pageNumber, pageW-20, pageH-6);
+    }
+  });
+
+  doc.save('Brokerage_' + segLabel.replace(/[^A-Z_]/g,'_') + '_' + Date.now() + '.pdf');
+}
+
+// Auto-calculate on load
+calculate();
+</script>
+</body>
+</html>
